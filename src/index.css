@@ -1,13 +1,159 @@
+/* index.css */
+
+@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+
+:root {
+  --cp-darker: #06020a;
+  --cp-dark: #120f20;
+  --cp-green: #55af65;
+  --cp-blue: #5572af;
+  --cp-purple: #363060;
+  --cp-grey: #999999;
+  --cp-red: #971218;
+}
+
+html, 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family: "Poppins", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background: var(--cp-darker)!important;
 }
 
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+}
+
+/* ===== Custom Classes ===== */
+
+.cp-rounded {
+  border-radius: 15px!important;
+}
+
+.cp-rounded-sm {
+  border-radius: 10px!important;
+}
+
+.cp-divider {
+  background: var(--cp-purple);
+  height: 1px;
+  width: 100%;
+  border-radius: 50px
+}
+
+/* ===== Background Color ===== */
+
+.cp-bg-darker {
+  background: var(--cp-darker);
+}
+
+.cp-bg-dark {
+  background: var(--cp-dark);
+}
+
+.cp-bg-green {
+  background: var(--cp-green);
+}
+
+.cp-bg-blue {
+  background: var(--cp-blue);
+}
+
+.cp-bg-grey {
+  background: var(--cp-grey);
+}
+
+.cp-bg-purple {
+  background: var(--cp-purple);
+}
+
+.cp-bg-red {
+  background: var(--cp-red);
+}
+
+/* ===== Text Color ===== */
+
+.cp-text-darker {
+  color: var(--cp-darker);
+}
+
+.cp-text-dark {
+  color: var(--cp-dark);
+}
+
+.cp-text-green {
+  color: var(--cp-green);
+}
+
+.cp-text-blue {
+  color: var(--cp-blue);
+}
+
+.cp-text-grey {
+  color: var(--cp-grey);
+}
+
+.cp-text-purple {
+  color: var(--cp-purple);
+}
+
+.cp-text-red {
+  color: var(--cp-red);
+}
+
+/* ===== Button ===== */
+
+.btn {
+  font-weight: 600;
+  border-radius: 8px;
+  padding: 5px 15px
+}
+
+.cp-btn-dark {
+  color: #fff;
+  background: var(--cp-dark);
+  border: 2px solid var(--cp-purple);
+}
+
+.cp-btn-dark:hover {
+  color: #fff;
+  background: var(--cp-dark);
+  border: 2px solid var(--cp-green);
+}
+
+/* ===== Sidebar ===== */
+
+#cp-navbar {
+  height: calc(100vh - 3rem);
+}
+
+#cp-navbar .nav-link {
+  text-transform: uppercase;
+  font-weight: 600;
+  opacity: .5;
+  transition: all .3s;
+}
+
+#cp-navbar .cp-active.nav-link,
+#cp-navbar .nav-link:hover {
+  opacity: 1
+}
+
+#cp-navbar .cp-progress {
+  height: 35px;
+  width: 35px;
+  border-radius: 50%;
+  border: 2px solid var(--cp-purple);
+}
+
+#cp-navbar .cp-active .cp-progress {
+  border: 2px solid var(--cp-green);
+}
+
+#cp-navbar .cp-percentage {
+  font-size: 8px;
+  color: var(--cp-grey);
+  position: relative;
+  top: 1px
 }
