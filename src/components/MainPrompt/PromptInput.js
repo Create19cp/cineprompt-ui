@@ -1,32 +1,20 @@
 import React, { useState } from "react";
 import useOpenAI from "../../hooks/useOpenAI";
 
-export default function PromptInput({ setScript, script, characters, scenes, selectedTones }) {
+export default function PromptInput({ script, setScript, characters, setCharacters, scenes, selectedTones }) {
   const [prompt, setPrompt] = useState("");
   const [response, setResponse] = useState("");
   const { callOpenAI, loading, error } = useOpenAI();
 
-  const buildContextPrompt = (userPrompt) => {
-    let context = "";
-
-    if (script) context += `Current Script:\n${script}\n\n`;
-    if (characters?.length) {
-      context += `Characters:\n${characters.map(c => `- ${c.name}`).join("\n")}\n\n`;
-    }
-    if (scenes?.length) {
-      context += `Scenes:\n${scenes.map(s => `${s.name}: ${s.description}`).join("\n")}\n\n`;
-    }
-    if (selectedTones?.length) {
-      context += `Tone: ${selectedTones.join(", ")}\n\n`;
-    }
-
-    return `${context}User Instruction:\n${userPrompt}`;
-  };
-
   const handleSend = async () => {
     if (!prompt.trim()) return;
-
-    const fullPrompt = buildContextPrompt(prompt);
+    const context = `
+      Script so far:\n${script}\n
+      Characters:\n${characters.map(c => c.name).join(", ")}\n
+      Tone:\n${selectedTones.map(t => t.name || t).join(", ")}\n
+      Scenes:\n${scenes.map(s => `${s.name}: ${s.description}`).join("\n")}\n
+    `;
+    const fullPrompt = `${context}\n\n${prompt}`;
     const aiResponse = await callOpenAI(fullPrompt);
     if (aiResponse) {
       setResponse(aiResponse);
@@ -34,11 +22,29 @@ export default function PromptInput({ setScript, script, characters, scenes, sel
   };
 
   const handleInsert = () => {
-    if (response) {
-      setScript((prev) => `${prev.trim()}\n\n${response}`);
-      setResponse("");
-      setPrompt("");
+    if (!response) return;
+
+    setScript((prev) => `${prev.trim()}\n\n${response}`);
+
+    // 🔍 Try to detect new character names
+    const matches = response.match(/^[A-Z][A-Z\s]{1,30}(?=\:)/gm); // e.g., JOHN:
+    const newNames = matches
+      ? [...new Set(matches.map(name => name.trim()))].filter(
+          name => !characters.find(c => c.name.toUpperCase() === name.toUpperCase())
+        )
+      : [];
+
+    if (newNames.length > 0) {
+      const newChars = newNames.map(name => ({
+        id: Date.now() + Math.random(),
+        name: name.trim(),
+        description: "",
+      }));
+      setCharacters((prev) => [...prev, ...newChars]);
     }
+
+    setResponse("");
+    setPrompt("");
   };
 
   return (
@@ -54,17 +60,11 @@ export default function PromptInput({ setScript, script, characters, scenes, sel
             style={{ flex: 1 }}
           />
         </div>
-
         <button className="btn cp-btn-dark" disabled>
           <i className="bi bi-mic-fill cp-text-green"></i>
         </button>
-
         <button className="btn cp-btn-green" onClick={handleSend} disabled={loading}>
-          {loading ? (
-            <span className="spinner-border spinner-border-sm"></span>
-          ) : (
-            <i className="bi bi-send-fill"></i>
-          )}
+          {loading ? <span className="spinner-border spinner-border-sm"></span> : <i className="bi bi-send-fill"></i>}
         </button>
       </div>
 

@@ -117,9 +117,11 @@ export default function ScriptPanel() {
             script={script}
             setScript={setScript}
             characters={characters}
+            setCharacters={setCharacters}
             scenes={scenes}
             selectedTones={selectedTones}
           />
+
         </div>
       </div>
     </div>
