@@ -1,0 +1,27 @@
+.cp-toast {
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+}
+
+.cp-toast-success {
+    background-color: var(--cp-dark);
+    border: 2px solid var(--cp-green);
+    color: #fff;
+}
+
+.cp-toast-danger {
+    background-color: #dc3545;
+    color: #fff;
+}
+
+.cp-toast-warning {
+    background-color: #ffc107;
+    color: #000;
+}
+
+.cp-toast-info {
+    background-color: #17a2b8;
+    color: #fff;
+}
+  

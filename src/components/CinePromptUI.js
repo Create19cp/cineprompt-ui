@@ -2,6 +2,7 @@ import React from "react";
 import SidebarNav from "./Sidebar/SidebarNav";
 import MainbarNav from "./Mainbar/MainbarNav";
 import ScriptPage from "../pages/ScriptPage"; 
+import PromptInput from "./MainPrompt/PromptInput";
 
 export default function CinePromptUI() {
   return (
