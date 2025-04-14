@@ -1,38 +1,85 @@
-import React, { useState } from "react";
-import CharacterModal from "./CharacterModal";
-import { useProject } from "../../context/ProjectContext";
+import React, { useState } from 'react';
+import CharacterModal from './CharacterModal';
+import { useProject } from '../../context/ProjectContext';
+import { debounce } from 'lodash';
 
 export default function Characters({ characters, setCharacters }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingCharacter, setEditingCharacter] = useState(null);
 
-  const { updateProject } = useProject(); // ✅ project context
+  const { currentProject, updateProject } = useProject();
 
-  const handleSave = (character) => {
-    setCharacters((prev) => {
-      const exists = prev.find((c) => c.id === character.id);
-      const updated = exists
-        ? prev.map((c) => (c.id === character.id ? character : c))
-        : [...prev, character];
-
-      updateProject({ characters: updated }); // ✅ save to project
-
-      return updated;
-    });
-
-    setModalOpen(false);
-    setEditingCharacter(null);
+  const handleSave = async (character) => {
+    try {
+      if (!character.name || !character.name.trim()) {
+        alert('Character name is required');
+        return;
+      }
+  
+      const characterData = {
+        id: character.id || null,
+        name: character.name.trim(),
+        description: character.description?.trim() || null,
+        color: character.color || '#000000',
+        projectId: currentProject.id,
+      };
+  
+      console.log('Saving character:', characterData);
+  
+      setCharacters((prev) => {
+        const exists = prev.find((c) => c.id === characterData.id);
+        const updated = exists
+          ? prev.map((c) => (c.id === characterData.id ? characterData : c))
+          : [...prev, characterData];
+  
+        console.log('Local characters updated:', updated);
+  
+        // Update project in backend
+        updateProject({ characters: updated })
+          .then((response) => {
+            console.log('updateProject response:', response);
+          })
+          .catch((error) => {
+            console.error('Failed to update project:', error);
+            alert(`Failed to save character: ${error.message}`);
+          });
+  
+        return updated;
+      });
+  
+      setModalOpen(false);
+      setEditingCharacter(null);
+    } catch (error) {
+      console.error('Error saving character:', error);
+      alert(`Error saving character: ${error.message}`);
+    }
   };
 
-  const handleDelete = (id) => {
-    setCharacters((prev) => {
-      const updated = prev.filter((c) => c.id !== id);
-      updateProject({ characters: updated }); // ✅ sync deletion
-      return updated;
-    });
+  const handleDelete = async (id) => {
+    try {
+      console.log('Deleting character with id:', id);
 
-    setModalOpen(false);
-    setEditingCharacter(null);
+      setCharacters((prev) => {
+        const updated = prev.filter((c) => c.id !== id);
+        console.log('Updated characters after delete:', updated);
+
+        updateProject({
+          ...currentProject,
+          characters: updated,
+        }).catch((error) => {
+          console.error('Failed to update project:', error);
+          alert(`Failed to delete character: ${error.message}`);
+        });
+
+        return updated;
+      });
+
+      setModalOpen(false);
+      setEditingCharacter(null);
+    } catch (error) {
+      console.error('Error deleting character:', error);
+      alert(`Error deleting character: ${error.message}`);
+    }
   };
 
   return (
@@ -52,7 +99,7 @@ export default function Characters({ characters, setCharacters }) {
       <div className="d-flex flex-wrap gap-2">
         {characters.map((char) => (
           <div
-            key={char.id}
+            key={char.id || `temp-${Date.now()}`} // Fallback key for safety
             className="cp-bg-darker px-3 py-2 cp-rounded-sm position-relative overflow-hidden"
           >
             <div className="position-relative z-front d-flex gap-2 align-items-center">

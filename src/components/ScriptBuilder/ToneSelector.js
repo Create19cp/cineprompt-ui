@@ -8,6 +8,16 @@ const toneOptions = [
   { value: "satirical", label: "Satirical" },
   { value: "mysterious", label: "Mysterious" },
   { value: "uplifting", label: "Uplifting" },
+  { value: "melancholic", label: "Melancholic" },
+  { value: "whimsical", label: "Whimsical" },
+  { value: "gritty", label: "Gritty" },
+  { value: "romantic", label: "Romantic" },
+  { value: "suspenseful", label: "Suspenseful" },
+  { value: "comical", label: "Comical" },
+  { value: "epic", label: "Epic" },
+  { value: "intimate", label: "Intimate" },
+  { value: "nostalgic", label: "Nostalgic" },
+  { value: "surreal", label: "Surreal" }
 ];
 
 export default function ToneSelector({ selectedTones, setSelectedTones }) {
@@ -34,11 +44,13 @@ export default function ToneSelector({ selectedTones, setSelectedTones }) {
         multiValueLabel: (base) => ({
           ...base,
           color: "#fff",
+          textTransform: "capitalize",
         }),
         option: (base, state) => ({
           ...base,
           backgroundColor: state.isFocused ? "#2d3748" : "transparent",
           color: "#fff",
+          textTransform: "capitalize",
         }),
       }}
     />

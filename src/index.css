@@ -67,6 +67,10 @@ code {
   cursor: pointer;
 }
 
+.nowrap {
+  white-space: nowrap;
+}
+
 /* ===== Modal Slide Up ===== */
 
 .modal {
@@ -183,15 +187,6 @@ code {
 
 .cp-yellow:hover {
   border: 2px solid var(--cp-yellow)!important;
-}
-
-.cp-btn-green:disabled,
-.cp-btn-green[disabled] {
-  background-color: var(--cp-green);
-  border-color: var(--cp-green);
-  color: #fff;
-  opacity: 0.7; 
-  cursor: not-allowed;
 }
 
 .cp-btn-dark {
