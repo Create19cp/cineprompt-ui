@@ -3,7 +3,6 @@ import React, { useState, useEffect } from "react";
 export default function SceneModal({ show, onClose, onSave, onDelete, initialData, characters, isEditing }) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [orderIndex, setOrderIndex] = useState(0);
   const [dialogues, setDialogues] = useState([]);
   const [selectedCharacterName, setSelectedCharacterName] = useState("");
   const [line, setLine] = useState("");
@@ -12,7 +11,6 @@ export default function SceneModal({ show, onClose, onSave, onDelete, initialDat
     if (initialData) {
       setName(initialData.name || "");
       setDescription(initialData.description || "");
-      setOrderIndex(initialData.orderIndex || 0);
       setDialogues(
         initialData.dialogues?.map((d, index) => {
           const character = characters.find(c => c.id === d.characterId) || characters.find(c => c.name.toLowerCase() === (d.characterName || d.character)?.toLowerCase());
@@ -20,15 +18,14 @@ export default function SceneModal({ show, onClose, onSave, onDelete, initialDat
             id: d.id || `temp-${index}-${Date.now()}`,
             characterName: character?.name || d.characterName || d.character?.name || "",
             content: d.content || d.line || "",
-            orderIndex: d.orderIndex ?? index, // Preserve orderIndex
+            orderIndex: d.orderIndex ?? index,
             characterId: character?.id || d.characterId,
           };
-        })?.sort((a, b) => a.orderIndex - b.orderIndex) || [] // Sort by orderIndex
+        })?.sort((a, b) => a.orderIndex - b.orderIndex) || []
       );
     } else {
       setName("");
       setDescription("");
-      setOrderIndex(0);
       setDialogues([]);
     }
   }, [initialData, characters]);
@@ -49,7 +46,7 @@ export default function SceneModal({ show, onClose, onSave, onDelete, initialDat
       id: `temp-${dialogues.length}-${Date.now()}`,
       characterName: character.name,
       content: line.trim(),
-      orderIndex: dialogues.length > 0 ? Math.max(...dialogues.map(d => d.orderIndex)) + 1 : 0, // Append last
+      orderIndex: dialogues.length > 0 ? Math.max(...dialogues.map(d => d.orderIndex)) + 1 : 0,
       characterId: character.id,
     };
 
@@ -97,13 +94,6 @@ export default function SceneModal({ show, onClose, onSave, onDelete, initialDat
               rows={3}
               onChange={(e) => setDescription(e.target.value)}
             />
-            <input
-              type="number"
-              className="form-control mb-3"
-              placeholder="Order Index"
-              value={orderIndex}
-              onChange={(e) => setOrderIndex(parseInt(e.target.value) || 0)}
-            />
             <div className="cp-divider mb-3"></div>
             <div className="d-flex mb-3 gap-2">
               <select
@@ -132,7 +122,7 @@ export default function SceneModal({ show, onClose, onSave, onDelete, initialDat
             {dialogues.length > 0 && (
               <div className="border-0 cp-rounded-sm py-2 px-3 cp-bg-darker">
                 {dialogues
-                  .sort((a, b) => a.orderIndex - b.orderIndex) // Display in orderIndex order
+                  .sort((a, b) => a.orderIndex - b.orderIndex)
                   .map((d) => (
                     <div
                       key={d.id}
@@ -171,7 +161,6 @@ export default function SceneModal({ show, onClose, onSave, onDelete, initialDat
                   id: initialData?.id || null,
                   name: name.trim(),
                   description: description.trim() || null,
-                  orderIndex,
                   dialogues,
                 });
               }}

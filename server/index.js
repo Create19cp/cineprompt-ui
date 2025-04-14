@@ -85,7 +85,6 @@ app.get('/test-db', async (req, res) => {
     const testScene = await Scene.create({
       name: 'Test Scene',
       description: 'This is a test scene',
-      orderIndex: 1,
       scriptId: testScript.id,
     });
 
@@ -124,6 +123,7 @@ app.get('/test-db', async (req, res) => {
                   model: Dialogue,
                   as: 'dialogues',
                   include: [{ model: Character, as: 'character' }],
+                  order: [['orderIndex', 'ASC']],
                 },
               ],
             },
@@ -172,6 +172,7 @@ app.get('/api/projects', async (req, res) => {
                   model: Dialogue,
                   as: 'dialogues',
                   include: [{ model: Character, as: 'character' }],
+                  order: [['orderIndex', 'ASC']],
                 },
               ],
             },
@@ -211,7 +212,7 @@ app.get('/api/projects/:id', async (req, res) => {
                   model: Dialogue,
                   as: 'dialogues',
                   include: [{ model: Character, as: 'character' }],
-                  order: [['orderIndex', 'ASC']], // Sort dialogues by orderIndex
+                  order: [['orderIndex', 'ASC']],
                 },
               ],
             },
@@ -323,105 +324,46 @@ app.put('/api/projects/:id', async (req, res) => {
 
     if (Array.isArray(req.body.scenes)) {
       console.log('Processing scenes:', req.body.scenes);
+      // Delete all existing scenes to rebuild in the new order
       const existingScenes = await script.getScenes();
-      const existingSceneIds = new Set(existingScenes.map(s => s.id));
+      for (const existingScene of existingScenes) {
+        console.log(`Deleting existing scene ${existingScene.id}`);
+        await existingScene.destroy();
+      }
 
+      // Create scenes in the received order
+      const newScenes = [];
       for (const scene of req.body.scenes) {
         if (!scene.name || !scene.scriptId) {
           console.warn('Skipping scene: missing name or scriptId', scene);
           continue;
         }
-        let sceneInstance;
-        if (scene.id) {
-          sceneInstance = existingScenes.find(s => s.id === scene.id);
-          if (sceneInstance) {
-            console.log(`Updating scene ${scene.id}:`, scene);
-            await sceneInstance.update({
-              name: scene.name,
-              description: scene.description || null,
-              orderIndex: scene.orderIndex || 0,
-            });
-            existingSceneIds.delete(scene.id);
-          }
-        } else {
-          console.log('Creating new scene:', scene);
-          sceneInstance = await Scene.create({
-            name: scene.name,
-            description: scene.description || null,
-            orderIndex: scene.orderIndex || existingScenes.length,
-            scriptId: script.id,
-          });
-          await script.addScene(sceneInstance);
-        }
+        console.log('Creating scene:', scene);
+        const sceneInstance = await Scene.create({
+          name: scene.name,
+          description: scene.description || null,
+          scriptId: script.id,
+        });
+        await script.addScene(sceneInstance);
+        newScenes.push(sceneInstance);
 
-        if (sceneInstance && Array.isArray(scene.dialogues)) {
+        if (Array.isArray(scene.dialogues)) {
           console.log(`Processing dialogues for scene ${sceneInstance.id}:`, scene.dialogues);
-          const existingDialogues = await sceneInstance.getDialogues();
-          const existingDialogueIds = new Set(existingDialogues.map(d => d.id));
-          const incomingDialogues = scene.dialogues.sort((a, b) => a.orderIndex - b.orderIndex); // Sort by orderIndex
-          const incomingDialogueIds = new Set(incomingDialogues.filter(d => d.id).map(d => d.id));
-
+          const incomingDialogues = scene.dialogues.sort((a, b) => a.orderIndex - b.orderIndex);
           for (const dialogue of incomingDialogues) {
             if (!dialogue.content || !dialogue.characterId) {
               console.warn('Skipping dialogue: missing content or characterId', dialogue);
               continue;
             }
-            if (dialogue.id) {
-              const existingDialogue = existingDialogues.find(d => d.id === dialogue.id);
-              if (existingDialogue) {
-                console.log(`Updating dialogue ${dialogue.id}:`, dialogue);
-                await existingDialogue.update({
-                  content: dialogue.content,
-                  orderIndex: dialogue.orderIndex || existingDialogues.length,
-                  characterId: dialogue.characterId,
-                });
-                existingDialogueIds.delete(dialogue.id);
-              } else {
-                console.warn(`Dialogue ID ${dialogue.id} not found, creating new`);
-                const newDialogue = await Dialogue.create({
-                  content: dialogue.content,
-                  orderIndex: dialogue.orderIndex || existingDialogues.length,
-                  sceneId: sceneInstance.id,
-                  characterId: dialogue.characterId,
-                });
-                await sceneInstance.addDialogue(newDialogue);
-              }
-            } else {
-              console.log('Creating new dialogue:', dialogue);
-              const duplicate = existingDialogues.find(
-                d => d.content === dialogue.content && d.characterId === dialogue.characterId
-              );
-              if (duplicate) {
-                console.warn('Duplicate dialogue detected, skipping:', dialogue);
-                continue;
-              }
-              const newDialogue = await Dialogue.create({
-                content: dialogue.content,
-                orderIndex: dialogue.orderIndex || existingDialogues.length,
-                sceneId: sceneInstance.id,
-                characterId: dialogue.characterId,
-              });
-              await sceneInstance.addDialogue(newDialogue);
-            }
+            console.log('Creating dialogue:', dialogue);
+            const newDialogue = await Dialogue.create({
+              content: dialogue.content,
+              orderIndex: dialogue.orderIndex || 0,
+              sceneId: sceneInstance.id,
+              characterId: dialogue.characterId,
+            });
+            await sceneInstance.addDialogue(newDialogue);
           }
-
-          for (const dialogueId of existingDialogueIds) {
-            if (!incomingDialogueIds.has(dialogueId)) {
-              const dialogueToDelete = existingDialogues.find(d => d.id === dialogueId);
-              if (dialogueToDelete) {
-                console.log(`Deleting dialogue ${dialogueId}`);
-                await dialogueToDelete.destroy();
-              }
-            }
-          }
-        }
-      }
-
-      for (const sceneId of existingSceneIds) {
-        const sceneToDelete = existingScenes.find(s => s.id === sceneId);
-        if (sceneToDelete) {
-          console.log(`Deleting scene ${sceneId}`);
-          await sceneToDelete.destroy();
         }
       }
     }

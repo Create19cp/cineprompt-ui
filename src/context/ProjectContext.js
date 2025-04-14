@@ -30,7 +30,7 @@ export function ProjectProvider({ children }) {
       const response = await fetch('http://localhost:3001/api/projects');
       if (!response.ok) throw new Error('Failed to fetch projects');
       const data = await response.json();
-      console.log('Fetched projects:', data);
+      console.log('Fetched projects:', JSON.stringify(data, null, 2));
       setProjects(data);
     } catch (error) {
       console.error('Error fetching projects:', error);
@@ -50,7 +50,7 @@ export function ProjectProvider({ children }) {
       });
       if (!response.ok) throw new Error('Failed to create project');
       const newProject = await response.json();
-      console.log('Created project:', newProject);
+      console.log('Created project:', JSON.stringify(newProject, null, 2));
       setProjects(prev => [...prev, newProject]);
       setCurrentProject(newProject);
       localStorage.setItem('lastActiveProjectId', newProject.id.toString());
@@ -78,11 +78,10 @@ export function ProjectProvider({ children }) {
         : currentProject.characters || [];
 
       const scenes = updatedFields.scenes
-        ? updatedFields.scenes.map((scene, index) => ({
+        ? updatedFields.scenes.map(scene => ({
             id: scene.id || null,
             name: scene.name,
             description: scene.description || null,
-            orderIndex: scene.orderIndex || index,
             scriptId: currentProject.script?.id,
             dialogues: Array.isArray(scene.dialogues)
               ? scene.dialogues.map((d, dIndex) => ({
@@ -120,12 +119,12 @@ export function ProjectProvider({ children }) {
       };
 
       if (!currentProject.script?.id) {
-        console.error('No script ID available for project:', currentProject);
+        console.error('No script ID available for project:', JSON.stringify(currentProject, null, 2));
         throw new Error('Cannot save without a script');
       }
 
       if (mergedData.scenes.some(scene => !scene.scriptId)) {
-        console.error('Missing scriptId in scenes:', mergedData.scenes);
+        console.error('Missing scriptId in scenes:', JSON.stringify(mergedData.scenes, null, 2));
         throw new Error('All scenes must have a scriptId');
       }
 
@@ -167,7 +166,7 @@ export function ProjectProvider({ children }) {
         throw new Error(errorData.error || 'Failed to fetch project');
       }
       const project = await response.json();
-      console.log('Selected project:', project);
+      console.log('Selected project:', JSON.stringify(project, null, 2));
       setCurrentProject(project);
       localStorage.setItem('lastActiveProjectId', projectId.toString());
     } catch (error) {

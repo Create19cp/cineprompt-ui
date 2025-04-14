@@ -1,3 +1,4 @@
+// models/Scene.js
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 const Script = require('./Script');
@@ -15,11 +16,6 @@ const Scene = sequelize.define('Scene', {
   description: {
     type: DataTypes.TEXT,
     allowNull: true,
-  },
-  orderIndex: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-    defaultValue: 0,
   },
   scriptId: {
     type: DataTypes.INTEGER,

@@ -80,7 +80,6 @@ export default function ScriptPanel() {
         const newScenesWithScriptId = scenesToAdd.map(scene => ({
           ...scene,
           scriptId: currentProject.script.id,
-          orderIndex: scene.orderIndex || scenes.length + scenesToAdd.indexOf(scene),
           dialogues: [],
         }));
         setScenes(prev => [...prev, ...newScenesWithScriptId]);

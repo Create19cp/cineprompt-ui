@@ -16,6 +16,7 @@ export function generateScriptFromScenes(scenes) {
       const description = scene.description?.trim() ? scene.description.trim() : '(No description)';
       const dialogues = Array.isArray(scene.dialogues)
         ? scene.dialogues
+            .sort((a, b) => a.orderIndex - b.orderIndex)
             .map((d, dIndex) => {
               if (!d || !d.content || typeof d.content !== 'string') {
                 console.warn(`Skipping invalid dialogue at scene ${index}, index ${dIndex}`, d);
@@ -74,7 +75,7 @@ export function parseScriptToScenes(script) {
     const description = descriptionMatch ? descriptionMatch[1].trim() : '';
 
     scenes.push({
-      id: `scene-${scenes.length}-${Date.now()}`, // Stable temp ID
+      id: `scene-${scenes.length}-${Date.now()}`,
       name: sceneName,
       description: description || '',
       dialogues,
