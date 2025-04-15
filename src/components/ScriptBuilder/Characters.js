@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import CharacterModal from './CharacterModal';
 import { useProject } from '../../context/ProjectContext';
-import { debounce } from 'lodash';
 
 export default function Characters({ characters, setCharacters }) {
   const [modalOpen, setModalOpen] = useState(false);
@@ -15,38 +14,64 @@ export default function Characters({ characters, setCharacters }) {
         alert('Character name is required');
         return;
       }
-  
+
+      const tempId = character.id || `temp-${crypto.randomUUID()}`;
       const characterData = {
-        id: character.id || null,
+        id: tempId,
         name: character.name.trim(),
         description: character.description?.trim() || null,
-        color: character.color || '#000000',
+        color: character.color || '#55af65',
         projectId: currentProject.id,
       };
-  
-      console.log('Saving character:', characterData);
-  
+
+      console.log('Saving character with tempId:', tempId, JSON.stringify(characterData, null, 2));
+
       setCharacters((prev) => {
-        const exists = prev.find((c) => c.id === characterData.id);
-        const updated = exists
-          ? prev.map((c) => (c.id === characterData.id ? characterData : c))
-          : [...prev, characterData];
-  
-        console.log('Local characters updated:', updated);
-  
-        // Update project in backend
-        updateProject({ characters: updated })
+        const isEditing = character.id && prev.some(c => c.id === character.id);
+        let updated;
+        if (isEditing) {
+          updated = prev.map((c) => (c.id === character.id ? { ...characterData, id: character.id } : c));
+        } else {
+          updated = [...prev, characterData];
+        }
+
+        console.log('Local characters updated:', JSON.stringify(updated, null, 2));
+
+        const charactersToSave = updated.map(c => ({
+          id: typeof c.id === 'string' && c.id.startsWith('temp-') ? null : c.id,
+          name: c.name,
+          description: c.description || null,
+          color: c.color,
+          projectId: currentProject.id,
+        }));
+
+        console.log('Sending characters to backend:', JSON.stringify(charactersToSave, null, 2));
+
+        updateProject({ characters: charactersToSave })
           .then((response) => {
-            console.log('updateProject response:', response);
+            console.log('updateProject response:', JSON.stringify(response, null, 2));
+            setCharacters((prevChars) => {
+              const backendCharacters = response.characters || prevChars;
+              const updatedChars = prevChars.map(pc => {
+                const matchingBackendChar = backendCharacters.find(bc =>
+                  bc.name === pc.name &&
+                  bc.description === pc.description &&
+                  bc.color === pc.color
+                );
+                return matchingBackendChar ? { ...pc, id: matchingBackendChar.id } : pc;
+              });
+              console.log('Final characters with backend IDs:', JSON.stringify(updatedChars, null, 2));
+              return updatedChars;
+            });
           })
           .catch((error) => {
             console.error('Failed to update project:', error);
             alert(`Failed to save character: ${error.message}`);
           });
-  
+
         return updated;
       });
-  
+
       setModalOpen(false);
       setEditingCharacter(null);
     } catch (error) {
@@ -61,15 +86,13 @@ export default function Characters({ characters, setCharacters }) {
 
       setCharacters((prev) => {
         const updated = prev.filter((c) => c.id !== id);
-        console.log('Updated characters after delete:', updated);
+        console.log('Updated characters after delete:', JSON.stringify(updated, null, 2));
 
-        updateProject({
-          ...currentProject,
-          characters: updated,
-        }).catch((error) => {
-          console.error('Failed to update project:', error);
-          alert(`Failed to delete character: ${error.message}`);
-        });
+        updateProject({ characters: updated })
+          .catch((error) => {
+            console.error('Failed to update project:', error);
+            alert(`Failed to delete character: ${error.message}`);
+          });
 
         return updated;
       });
@@ -90,6 +113,7 @@ export default function Characters({ characters, setCharacters }) {
           className="bi bi-plus-square-fill cp-text-green cp-pointer"
           role="button"
           onClick={() => {
+            console.log("Opening modal for new character");
             setEditingCharacter(null);
             setModalOpen(true);
           }}
@@ -99,14 +123,15 @@ export default function Characters({ characters, setCharacters }) {
       <div className="d-flex flex-wrap gap-2">
         {characters.map((char) => (
           <div
-            key={char.id || `temp-${Date.now()}`} // Fallback key for safety
+            key={char.id || `temp-${char.name}-${crypto.randomUUID()}`}
             className="cp-bg-darker px-3 py-2 cp-rounded-sm position-relative overflow-hidden"
           >
             <div className="position-relative z-front d-flex gap-2 align-items-center">
-              <i className="bi bi-person-fill cp-text-green opacity-50"></i>
+              <i className="bi bi-person-fill" style={{ color: char.color || '#55af65' }}></i>
               <span className="cp-text-color fw-600 fs-14 me-3">{char.name}</span>
               <div
                 onClick={() => {
+                  console.log("Editing character:", JSON.stringify(char, null, 2));
                   setEditingCharacter(char);
                   setModalOpen(true);
                 }}
@@ -121,7 +146,11 @@ export default function Characters({ characters, setCharacters }) {
 
       <CharacterModal
         show={modalOpen}
-        onClose={() => setModalOpen(false)}
+        onClose={() => {
+          console.log("Closing character modal, editingCharacter:", editingCharacter);
+          setModalOpen(false);
+          setEditingCharacter(null);
+        }}
         onSave={handleSave}
         onDelete={handleDelete}
         initialData={editingCharacter}

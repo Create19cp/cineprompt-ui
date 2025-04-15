@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 
-export default function SceneModal({ show, onClose, onSave, onDelete, initialData, characters, isEditing }) {
+export default function SceneModal({ show, onClose, onSave, onDelete, initialData, characters }) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [dialogues, setDialogues] = useState([]);
@@ -13,7 +13,8 @@ export default function SceneModal({ show, onClose, onSave, onDelete, initialDat
       setDescription(initialData.description || "");
       setDialogues(
         initialData.dialogues?.map((d, index) => {
-          const character = characters.find(c => c.id === d.characterId) || characters.find(c => c.name.toLowerCase() === (d.characterName || d.character)?.toLowerCase());
+          const character = characters.find(c => c.id === d.characterId) || 
+                           characters.find(c => c.name.toLowerCase() === (d.characterName || d.character)?.toLowerCase());
           return {
             id: d.id || `temp-${index}-${Date.now()}`,
             characterName: character?.name || d.characterName || d.character?.name || "",
@@ -24,9 +25,12 @@ export default function SceneModal({ show, onClose, onSave, onDelete, initialDat
         })?.sort((a, b) => a.orderIndex - b.orderIndex) || []
       );
     } else {
+      console.log("Resetting modal for new scene");
       setName("");
       setDescription("");
       setDialogues([]);
+      setSelectedCharacterName("");
+      setLine("");
     }
   }, [initialData, characters]);
 
@@ -74,7 +78,7 @@ export default function SceneModal({ show, onClose, onSave, onDelete, initialDat
       <div className="modal-dialog modal-dialog-centered">
         <div className="modal-content cp-bg-dark text-white cp-rounded-sm border-0">
           <div className="modal-header border-0 cp-bg-purple px-4 d-flex justify-content-between">
-            <h6 className="modal-title">{isEditing ? "Edit Scene" : "Add Scene"}</h6>
+            <h6 className="modal-title">{initialData ? "Edit Scene" : "Add Scene"}</h6>
             <div className="cp-pointer" onClick={onClose}>
               <i className="bi bi-x-lg opacity-75"></i>
             </div>
@@ -141,7 +145,7 @@ export default function SceneModal({ show, onClose, onSave, onDelete, initialDat
             )}
           </div>
           <div className="modal-footer border-0 px-4 pt-0 pb-4">
-            {isEditing && (
+            {initialData?.id && (
               <button
                 className="btn cp-btn-dark me-auto cp-red"
                 onClick={() => onDelete(initialData.id)}
@@ -163,10 +167,15 @@ export default function SceneModal({ show, onClose, onSave, onDelete, initialDat
                   description: description.trim() || null,
                   dialogues,
                 });
+                setName("");
+                setDescription("");
+                setDialogues([]);
+                setSelectedCharacterName("");
+                setLine("");
               }}
               disabled={!name.trim()}
             >
-              {isEditing ? "Update" : "Add"}
+              {initialData ? "Update" : "Add"}
             </button>
           </div>
         </div>

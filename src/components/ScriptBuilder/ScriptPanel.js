@@ -9,6 +9,7 @@ import SceneList from "./SceneList";
 import GenreSelector from "./GenreSelector";
 import ToneSelector from "./ToneSelector";
 import Characters from "./Characters";
+import ProjectNameEditor from "./ProjectNameEditor";
 
 export default function ScriptPanel() {
   const { currentProject, updateProject, loading } = useProject();
@@ -102,7 +103,8 @@ export default function ScriptPanel() {
     <div id="cp-scriptpanel" className="row g-4 text-white">
       <div className="col-xxl-8">
         <div className="cp-bg-dark p-4 cp-rounded">
-          <ScriptEditor 
+          <ProjectNameEditor />
+          <ScriptEditor
             script={script} 
             setScript={setScript}
             scenes={scenes}
@@ -140,8 +142,8 @@ export default function ScriptPanel() {
             />
           </div>
           <div className="mb-0">
-            <SceneList 
-              scenes={scenes} 
+            <SceneList
+              scenes={scenes}
               setScenes={setScenes}
               characters={characters}
             />

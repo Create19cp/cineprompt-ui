@@ -52,6 +52,10 @@ code {
   border-radius: 10px!important;
 }
 
+.cp-rounded-start-sm {
+  border-radius: 10px 0 0 10px!important
+}
+
 .cp-divider {
   background: var(--cp-purple);
   height: 1px;
@@ -170,6 +174,17 @@ code {
 
 /* ===== Button ===== */
 
+[type=button]:not(:disabled), 
+[type=reset]:not(:disabled), 
+[type=submit]:not(:disabled), 
+button:not(:disabled),
+.btn:disabled {
+  cursor: pointer;
+  background: var(--cp-dark);
+  border: 2px solid var(--cp-purple);
+  opacity: .5;
+}
+
 .btn {
   font-weight: 600;
   border-radius: 8px;
@@ -253,6 +268,8 @@ code {
 
 .cp-select-container .cp-select__indicator svg {
   fill: var(--cp-green)!important;
+  position: relative;
+  right: 10px;
 }
 
 .cp-select__single-value {
@@ -389,6 +406,17 @@ code {
 }
 
 /* ===== Script Panel ===== */
+
+#cp-scene-list .bi-pencil-fill {
+  background: rgba(255,255,255,0.1);
+  display: flex;
+  height: 100%;
+  align-items: center;
+  border-radius: 0 10px 10px 0;
+  padding: 0 12px;
+  position: relative;
+  left: 0!important;
+}
 
 #cp-script-characters .bi-pencil-fill:hover,
 #cp-script-scenes .bi-pencil-fill:hover {

@@ -1,13 +1,22 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, sortableKeyboardCoordinates, useSortable, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import SceneModal from "./SceneModal";
 import { useProject } from "../../context/ProjectContext";
 
+// Simple debounce function
+const debounce = (func, wait) => {
+  let timeout;
+  return (...args) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
+};
+
 function SortableScene({ scene, onEdit }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
-    id: scene.id?.toString() || `temp-${scene.name}-${Date.now()}`,
+    id: scene.id?.toString(),
   });
 
   const style = {
@@ -16,22 +25,21 @@ function SortableScene({ scene, onEdit }) {
   };
 
   return (
-    <div className="d-flex align-items-center gap-2">
+    <div id="cp-scene-list" className="d-flex align-items-center gap-0">
       <div
         ref={setNodeRef}
         style={style}
         {...attributes}
         {...listeners}
-        className="cp-bg-darker px-3 py-2 cp-rounded-sm position-relative overflow-hidden flex-grow-1"
+        className="cp-bg-darker px-3 py-2 cp-rounded-start-sm position-relative overflow-hidden flex-grow-1"
       >
         <div className="position-relative z-front d-flex gap-2 align-items-center">
           <i className="bi bi-image-fill cp-text-blue opacity-50"></i>
           <span className="cp-text-color fw-600 fs-14">{scene.name}</span>
         </div>
-
       </div>
       <i
-        className="bi bi-pencil-fill text-white opacity-50 fs-14 cp-pointer"
+        className="bi bi-pencil-fill text-white fs-14 cp-pointer opacity-50"
         onClick={(e) => {
           e.preventDefault();
           console.log("Edit clicked for scene:", JSON.stringify(scene, null, 2));
@@ -45,7 +53,7 @@ function SortableScene({ scene, onEdit }) {
 export default function SceneList({ scenes, setScenes, characters }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingScene, setEditingScene] = useState(null);
-  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const { currentProject, updateProject } = useProject();
 
@@ -60,7 +68,12 @@ export default function SceneList({ scenes, setScenes, characters }) {
     })
   );
 
-  const handleSave = async (scene) => {
+  const handleSave = useCallback(debounce(async (scene) => {
+    if (isSaving) {
+      console.log("Save in progress, skipping:", scene.name);
+      return;
+    }
+    setIsSaving(true);
     try {
       if (!scene.name || !scene.name.trim()) {
         alert("Scene name is required");
@@ -95,27 +108,69 @@ export default function SceneList({ scenes, setScenes, characters }) {
             .filter(d => d !== null)
         : [];
 
+      const tempId = `temp-${crypto.randomUUID()}`;
       const sceneData = {
-        id: typeof scene.id === 'string' && scene.id.startsWith('temp-') ? null : scene.id,
+        id: scene.id || tempId,
         name: scene.name.trim(),
         description: scene.description || null,
         scriptId: currentProject.script.id,
         dialogues: incomingDialogues,
       };
 
-      console.log("Saving scene:", JSON.stringify(sceneData, null, 2));
+      console.log("Saving scene with tempId:", tempId, JSON.stringify(sceneData, null, 2));
 
       setScenes((prev) => {
-        const exists = prev.find((s) => s.id === sceneData.id);
-        const updated = exists
-          ? prev.map((s) => (s.id === sceneData.id ? sceneData : s))
-          : [...prev, sceneData];
+        const isEditing = scene.id && prev.some(s => s.id === scene.id);
+        let updated;
+        if (isEditing) {
+          updated = prev.map((s) => (s.id === scene.id ? { ...sceneData, id: scene.id } : s));
+        } else {
+          // Deduplicate by name and tempId to prevent accidental duplicates
+          const existingNames = new Set(prev.map(s => s.name));
+          if (existingNames.has(sceneData.name)) {
+            console.warn(`Scene with name ${sceneData.name} already exists, checking IDs`);
+            updated = prev.filter(s => s.id !== tempId).concat(sceneData);
+          } else {
+            updated = [...prev, sceneData];
+          }
+        }
 
         console.log("Updated local scenes:", JSON.stringify(updated, null, 2));
 
-        updateProject({ scenes: updated })
+        const scenesToSave = updated.map(s => ({
+          id: typeof s.id === 'string' && s.id.startsWith('temp-') ? null : s.id,
+          name: s.name,
+          description: s.description || null,
+          scriptId: currentProject.script.id,
+          dialogues: Array.isArray(s.dialogues)
+            ? s.dialogues.map(d => ({
+                id: d.id && !d.id.toString().startsWith('temp-') ? d.id : null,
+                content: d.content,
+                characterId: d.characterId,
+                orderIndex: d.orderIndex,
+              }))
+            : [],
+        }));
+
+        console.log("Sending scenes to backend:", JSON.stringify(scenesToSave, null, 2));
+
+        updateProject({ scenes: scenesToSave })
           .then((response) => {
             console.log("updateProject response:", JSON.stringify(response, null, 2));
+            setScenes((prevScenes) => {
+              const backendScenes = response.script.scenes || prevScenes;
+              // Map temp IDs to backend IDs
+              const updatedScenes = prevScenes.map(ps => {
+                const matchingBackendScene = backendScenes.find(bs => 
+                  bs.name === ps.name && 
+                  bs.description === ps.description &&
+                  bs.dialogues.length === ps.dialogues.length
+                );
+                return matchingBackendScene ? { ...ps, id: matchingBackendScene.id } : ps;
+              });
+              console.log("Final scenes with backend IDs:", JSON.stringify(updatedScenes, null, 2));
+              return updatedScenes;
+            });
           })
           .catch((error) => {
             console.error("Failed to update project:", error);
@@ -127,12 +182,13 @@ export default function SceneList({ scenes, setScenes, characters }) {
 
       setModalOpen(false);
       setEditingScene(null);
-      setIsEditing(false);
     } catch (error) {
       console.error("Error saving scene:", error);
       alert(`Failed to save scene: ${error.message}`);
+    } finally {
+      setIsSaving(false);
     }
-  };
+  }, 500), [currentProject, updateProject, characters, isSaving]);
 
   const handleDelete = async (id) => {
     try {
@@ -148,7 +204,6 @@ export default function SceneList({ scenes, setScenes, characters }) {
       });
       setModalOpen(false);
       setEditingScene(null);
-      setIsEditing(false);
     } catch (error) {
       console.error("Error deleting scene:", error);
       alert(`Error deleting scene: ${error.message}`);
@@ -165,8 +220,8 @@ export default function SceneList({ scenes, setScenes, characters }) {
 
     try {
       setScenes((prev) => {
-        const activeIndex = prev.findIndex((s) => (s.id ? s.id.toString() : `temp-${s.name}-${Date.now()}`) === active.id);
-        const overIndex = prev.findIndex((s) => (s.id ? s.id.toString() : `temp-${s.name}-${Date.now()}`) === over.id);
+        const activeIndex = prev.findIndex((s) => (s.id ? s.id.toString() : `temp-${s.name}-${crypto.randomUUID()}`) === active.id);
+        const overIndex = prev.findIndex((s) => (s.id ? s.id.toString() : `temp-${s.name}-${crypto.randomUUID()}`) === over.id);
 
         if (activeIndex === -1 || overIndex === -1) {
           console.warn("Invalid drag indices:", { activeIndex, overIndex });
@@ -176,7 +231,6 @@ export default function SceneList({ scenes, setScenes, characters }) {
         const reorderedScenes = arrayMove(prev, activeIndex, overIndex);
         console.log("Reordered scenes:", JSON.stringify(reorderedScenes, null, 2));
 
-        // Send minimal scene data to avoid backend issues
         const scenesToSave = reorderedScenes.map(scene => ({
           id: typeof scene.id === 'string' && scene.id.startsWith('temp-') ? null : scene.id,
           name: scene.name,
@@ -194,7 +248,6 @@ export default function SceneList({ scenes, setScenes, characters }) {
 
         console.log("Saving scenes order:", JSON.stringify(scenesToSave, null, 2));
 
-        // Retry logic for updateProject
         let attempts = 3;
         const saveOrder = async () => {
           while (attempts > 0) {
@@ -206,7 +259,7 @@ export default function SceneList({ scenes, setScenes, characters }) {
               attempts--;
               console.warn(`Save attempt failed, ${attempts} left:`, error.message);
               if (attempts === 0) throw error;
-              await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1s before retry
+              await new Promise(resolve => setTimeout(resolve, 1000));
             }
           }
         };
@@ -239,22 +292,20 @@ export default function SceneList({ scenes, setScenes, characters }) {
               }
               console.log("Opening modal for new scene");
               setEditingScene(null);
-              setIsEditing(false);
               setModalOpen(true);
             }}
           ></i>
         </div>
 
-        <SortableContext items={scenes.map(scene => scene.id?.toString() || `temp-${scene.name}-${Date.now()}`)}>
+        <SortableContext items={scenes.map(scene => scene.id?.toString() || `temp-${scene.name}-${crypto.randomUUID()}`)}>
           <div className="d-flex flex-wrap gap-2">
             {scenes.map((scene) => (
               <SortableScene
-                key={scene.id || `temp-${scene.name}-${Date.now()}`}
+                key={scene.id || `temp-${scene.name}-${crypto.randomUUID()}`}
                 scene={scene}
                 onEdit={(scene) => {
                   console.log("Setting editing scene:", JSON.stringify(scene, null, 2));
                   setEditingScene(scene);
-                  setIsEditing(true);
                   setModalOpen(true);
                 }}
               />
@@ -265,16 +316,14 @@ export default function SceneList({ scenes, setScenes, characters }) {
         <SceneModal
           show={modalOpen}
           onClose={() => {
-            console.log("Closing modal, modalOpen:", modalOpen);
+            console.log("Closing scene modal, editingScene:", editingScene);
             setModalOpen(false);
             setEditingScene(null);
-            setIsEditing(false);
           }}
           onSave={handleSave}
           onDelete={handleDelete}
           initialData={editingScene}
           characters={characters}
-          isEditing={isEditing}
         />
       </div>
     </DndContext>
