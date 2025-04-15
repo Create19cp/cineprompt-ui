@@ -174,10 +174,6 @@ code {
 
 /* ===== Button ===== */
 
-[type=button]:not(:disabled), 
-[type=reset]:not(:disabled), 
-[type=submit]:not(:disabled), 
-button:not(:disabled),
 .btn:disabled {
   cursor: pointer;
   background: var(--cp-dark);

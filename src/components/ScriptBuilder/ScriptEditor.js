@@ -474,7 +474,7 @@ export default function ScriptEditor({ script, setScript, scenes }) {
         <div className="d-flex align-items-center gap-3">
           <p className="mb-0 fw-600 opacity-50 ms-1">Script Editor</p>
           {currentScene && (
-            <span className="badge cp-bg-darker cp-text-green">Current Scene: {currentScene}</span>
+            <span className="badge cp-bg-darker cp-text-green">{currentScene}</span>
           )}
         </div>
         <div className="d-flex align-items-center gap-3">
