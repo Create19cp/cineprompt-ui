@@ -189,51 +189,70 @@ code {
 }
 
 .cp-green:hover {
-  border: 2px solid var(--cp-green)!important;
+  border: 1px solid var(--cp-green)!important;
 }
 
 .cp-red:hover {
-  border: 2px solid var(--cp-red)!important;
+  border: 1px solid var(--cp-red)!important;
 }
 
 .cp-yellow:hover {
-  border: 2px solid var(--cp-yellow)!important;
+  border: 1px solid var(--cp-yellow)!important;
 }
 
 .cp-btn-dark {
   color: #fff;
   background: var(--cp-dark);
-  border: 2px solid var(--cp-purple);
+  border: 1px solid var(--cp-purple);
 }
 
 .cp-btn-dark:hover {
   color: #fff;
   background: var(--cp-dark);
-  border: 2px solid #645ab3;
+  border: 1px solid #645ab3;
 }
 
 .cp-btn-red {
   color: #fff;
   background: var(--cp-red);
-  border: 2px solid var(--cp-red);
+  border: 1px solid var(--cp-red);
 }
 
 .cp-btn-red:hover {
   color: #fff;
   background: var(--cp-dark);
-  border: 2px solid var(--cp-red);
+  border: 1px solid var(--cp-red);
 }
 
 .cp-btn-green {
   color: #fff;
   background: var(--cp-green);
-  border: 2px solid var(--cp-green);
+  border: 1px solid var(--cp-green);
 }
 
 .cp-btn-green:hover {
   color: var(--cp-light);
   background: var(--cp-dark);
-  border: 2px solid var(--cp-green);
+  border: 1px solid var(--cp-green);
+}
+
+/* ===== Mic Button ===== */
+
+.animate-pulse i:before {
+  animation: pulse 1.5s infinite;
+  content: "\F57C";
+}
+
+.cp-dictating {
+  background-color: var(--cp-darker) !important; /* Keep cp-bg-darker */
+  color: white !important;
+  opacity: 1 !important;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
 }
 
 /* ===== Form Styles ===== */
@@ -262,10 +281,13 @@ code {
   font-weight: 600;
 }
 
-.cp-select-container .cp-select__indicator svg {
-  fill: var(--cp-green)!important;
+#cp-mainnav .cp-select-container .cp-select__indicator svg {
   position: relative;
   right: 10px;
+}
+
+.cp-select-container .cp-select__indicator svg {
+  fill: var(--cp-green)!important;
 }
 
 .cp-select__single-value {
@@ -406,7 +428,6 @@ code {
 #cp-scene-list .bi-pencil-fill {
   background: rgba(255,255,255,0.1);
   display: flex;
-  height: 100%;
   align-items: center;
   border-radius: 0 10px 10px 0;
   padding: 0 12px;

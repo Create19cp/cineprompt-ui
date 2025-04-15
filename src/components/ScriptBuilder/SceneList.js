@@ -26,26 +26,26 @@ function SortableScene({ scene, onEdit }) {
 
   return (
     <div id="cp-scene-list" className="d-flex align-items-center gap-0">
-      <div
-        ref={setNodeRef}
-        style={style}
-        {...attributes}
-        {...listeners}
-        className="cp-bg-darker px-3 py-2 cp-rounded-start-sm position-relative overflow-hidden flex-grow-1"
-      >
-        <div className="position-relative z-front d-flex gap-2 align-items-center">
-          <i className="bi bi-image-fill cp-text-blue opacity-50"></i>
-          <span className="cp-text-color fw-600 fs-14">{scene.name}</span>
+        <div
+          ref={setNodeRef}
+          style={style}
+          {...attributes}
+          {...listeners}
+          className="cp-bg-darker px-3 py-2 cp-rounded-start-sm position-relative overflow-hidden flex-grow-1"
+        >
+          <div className="position-relative z-front d-flex gap-2 align-items-center">
+            <i className="bi bi-image-fill cp-text-blue opacity-50"></i>
+            <span className="cp-text-color fw-600 fs-14">{scene.name}</span>
+          </div>
         </div>
-      </div>
-      <i
-        className="bi bi-pencil-fill text-white fs-14 cp-pointer opacity-50"
-        onClick={(e) => {
-          e.preventDefault();
-          console.log("Edit clicked for scene:", JSON.stringify(scene, null, 2));
-          onEdit(scene);
-        }}
-      ></i>
+        <i
+          className="bi bi-pencil-fill text-white fs-14 cp-pointer opacity-50 align-self-stretch d-flex"
+          onClick={(e) => {
+            e.preventDefault();
+            console.log("Edit clicked for scene:", JSON.stringify(scene, null, 2));
+            onEdit(scene);
+          }}
+        ></i>
     </div>
   );
 }
@@ -298,7 +298,7 @@ export default function SceneList({ scenes, setScenes, characters }) {
         </div>
 
         <SortableContext items={scenes.map(scene => scene.id?.toString() || `temp-${scene.name}-${crypto.randomUUID()}`)}>
-          <div className="d-flex flex-wrap gap-2">
+          <div className="d-flex flex-column gap-2 h-max-height overflow-auto">
             {scenes.map((scene) => (
               <SortableScene
                 key={scene.id || `temp-${scene.name}-${crypto.randomUUID()}`}

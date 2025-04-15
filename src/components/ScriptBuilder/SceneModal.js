@@ -119,8 +119,8 @@ export default function SceneModal({ show, onClose, onSave, onDelete, initialDat
                 value={line}
                 onChange={(e) => setLine(e.target.value)}
               />
-              <button className="btn cp-btn-green" onClick={handleAddDialogue}>
-                Add
+              <button className="btn cp-btn-dark cp-green" onClick={handleAddDialogue}>
+                <i className="bi bi-plus-lg cp-text-green"></i>
               </button>
             </div>
             {dialogues.length > 0 && (
@@ -175,7 +175,7 @@ export default function SceneModal({ show, onClose, onSave, onDelete, initialDat
               }}
               disabled={!name.trim()}
             >
-              {initialData ? "Update" : "Add"}
+              {initialData ? "Update" : "Add Scene"}
             </button>
           </div>
         </div>
