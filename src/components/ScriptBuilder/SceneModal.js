@@ -263,7 +263,7 @@ export default function SceneModal({ show, onClose, onSave, onDelete, initialDat
                   <div className="d-flex align-items-center gap-2">
                     {isLoading && (
                       <>
-                        <span className="spinner-grow spinner-grow-sm cp-text-green" aria-hidden="true"></span>
+                        <span className="spinner-grow spinner-grow-sm" aria-hidden="true"></span>
                         <span className="visually-hidden" role="status">Loading...</span>
                       </>
                     )}

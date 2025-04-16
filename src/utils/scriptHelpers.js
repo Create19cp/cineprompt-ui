@@ -1,4 +1,3 @@
-// utils/scriptHelpers.js
 export function generateScriptFromScenes(scenes) {
   if (!Array.isArray(scenes)) {
     console.warn('generateScriptFromScenes: scenes is not an array', scenes);
@@ -13,7 +12,7 @@ export function generateScriptFromScenes(scenes) {
       }
 
       const header = `[SCENE: ${scene.name.trim()}]`;
-      const description = scene.description?.trim() ? scene.description.trim() : '(No description)';
+      const description = scene.description?.trim() ? scene.description.trim() : '';
       const dialogues = Array.isArray(scene.dialogues)
         ? scene.dialogues
             .sort((a, b) => a.orderIndex - b.orderIndex)
@@ -22,9 +21,9 @@ export function generateScriptFromScenes(scenes) {
                 console.warn(`Skipping invalid dialogue at scene ${index}, index ${dIndex}`, d);
                 return null;
               }
-              const name = (d.characterName || d.character?.name || 'UNKNOWN').toUpperCase().trim();
+              const name = (d.characterName || d.character?.name || 'UNKNOWN').trim();
               const line = d.content.trim();
-              return `${name}: ${line}`;
+              return `[DIALOGUE: ${name}] ${line}`;
             })
             .filter(line => line)
             .join('\n')
@@ -40,7 +39,7 @@ export function generateScriptFromScenes(scenes) {
   return finalScript;
 }
 
-export function parseScriptToScenes(script) {
+export function parseScriptToScenes(script, characters = []) {
   if (typeof script !== 'string' || !script.trim()) {
     console.warn('parseScriptToScenes: invalid or empty script', script);
     return [];
@@ -48,6 +47,9 @@ export function parseScriptToScenes(script) {
 
   const scenes = [];
   const sceneRegex = /\[SCENE:\s*(.*?)\](?:\n|$)([\s\S]*?)(?=\[SCENE:|$)/gi;
+  const characterMap = new Map(
+    characters.map(c => [c.name.toLowerCase(), c])
+  );
 
   let match;
   while ((match = sceneRegex.exec(script)) !== null) {
@@ -56,28 +58,48 @@ export function parseScriptToScenes(script) {
 
     const sceneContent = match[2].trim();
     const dialogues = [];
-    const dialogueRegex = /^([^\n:]+?):\s*([\s\S]*?)(?=\n{2,}|$|^[^\n:]+?:)/gmi;
+    const dialogueRegex = /\[DIALOGUE:\s*([^\]]+)\]\s*(.*?)(?=\n|$)/gmi;
     let dialogueMatch;
 
     while ((dialogueMatch = dialogueRegex.exec(sceneContent)) !== null) {
       const characterName = dialogueMatch[1].trim();
       const content = dialogueMatch[2].trim();
-      if (characterName && content) {
-        dialogues.push({
-          characterName,
-          content,
-          orderIndex: dialogues.length,
-        });
-      }
+      if (!characterName || !content) continue;
+
+      const character = characterMap.get(characterName.toLowerCase());
+      dialogues.push({
+        id: `dialogue-${scenes.length}-${dialogues.length}-${Date.now()}`,
+        characterName,
+        content,
+        orderIndex: dialogues.length,
+        characterId: character ? character.id : null,
+      });
     }
 
-    const descriptionMatch = sceneContent.match(/^([\s\S]*?)(?=(?:^[^\n:]+?:|\n{2,}|$))/mi);
-    const description = descriptionMatch ? descriptionMatch[1].trim() : '';
+    // Capture description, including lines starting with "Description:"
+    const descriptionLines = [];
+    const descriptionRegex = /^([\s\S]*?)(?=\[DIALOGUE:|$)/i;
+    const descriptionMatch = sceneContent.match(descriptionRegex);
+    if (descriptionMatch) {
+      const rawDescription = descriptionMatch[1].trim();
+      const lines = rawDescription.split('\n');
+      lines.forEach(line => {
+        const trimmedLine = line.trim();
+        if (trimmedLine && !trimmedLine.match(/^\[CHARACTER:/i)) {
+          if (trimmedLine.match(/^Description:/i)) {
+            descriptionLines.push(trimmedLine.replace(/^Description:\s*/i, ''));
+          } else {
+            descriptionLines.push(trimmedLine);
+          }
+        }
+      });
+    }
+    const description = descriptionLines.join('\n').trim() || '';
 
     scenes.push({
       id: `scene-${scenes.length}-${Date.now()}`,
       name: sceneName,
-      description: description || '',
+      description,
       dialogues,
     });
   }
@@ -93,18 +115,20 @@ export function parseScriptToCharacters(script) {
   }
 
   const characters = new Set();
-  const characterRegex = /^([^\n:]+?):\s*/gmi;
+  const characterRegex = /\[CHARACTER:\s*([^\]]+)\]|\[DIALOGUE:\s*([^\]]+)\]/gmi;
 
   let match;
   while ((match = characterRegex.exec(script)) !== null) {
-    const characterName = match[1].trim();
+    const characterName = match[1] || match[2];
+    const cleanedName = characterName.trim();
     if (
-      characterName &&
-      !characterName.toUpperCase().includes('SCENE') &&
-      !characterName.toUpperCase().includes('INT') &&
-      !characterName.toUpperCase().includes('EXT')
+      cleanedName &&
+      !cleanedName.toUpperCase().includes('SCENE') &&
+      !cleanedName.toUpperCase().includes('INT') &&
+      !cleanedName.toUpperCase().includes('EXT') &&
+      !cleanedName.toUpperCase().includes('DESCRIPTION')
     ) {
-      characters.add(characterName.toLowerCase());
+      characters.add(cleanedName.toLowerCase());
     }
   }
 

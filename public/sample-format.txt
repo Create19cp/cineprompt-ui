@@ -1,47 +1,21 @@
 [SCENE: Scene 1]
-
-A bustling coffee shop in downtown. People chat, work on laptops, and sip their drinks.
-
-JOHN:
-(entering)
-Hey, Sarah! Long time no see.
-
-SARAH:
-(smiling)
-John! It's been ages. How have you been?
+Description: A bustling coffee shop in downtown. People chat, work on laptops, and sip their drinks.
+[CHARACTER: John]
+[CHARACTER: Sarah]
+[DIALOGUE: John] Hey, Sarah! Long time no see.
+[DIALOGUE: Sarah] John! It's been ages. How have you been?
 
 [SCENE: Scene 2]
-
-A younger John and Sarah walk across campus, books in hand.
-
-JOHN:
-Remember when we used to study here?
-
-SARAH:
-(laughing)
-Yeah, and you always fell asleep in the library.
+Description: A younger John and Sarah walk across campus, books in hand.
+[DIALOGUE: John] Remember when we used to study here?
+[DIALOGUE: Sarah] Yeah, and you always fell asleep in the library.
 
 [SCENE: Scene 3]
-
-EXT. COFFEE SHOP - DAY
-
-John and Sarah exit the coffee shop, still chatting.
-
-JOHN:
-So, what brings you back to town?
-
-SARAH:
-I'm here for the reunion. You going?
+Description: EXT. COFFEE SHOP - DAY
+[DIALOGUE: John] So, what brings you back to town?
+[DIALOGUE: Sarah] I'm here for the reunion. You going?
 
 [SCENE: Scene 4]
-
-INT. HIGH SCHOOL GYM - NIGHT
-
-The gym is decorated with streamers and balloons. A DJ plays music in the corner.
-
-JOHN:
-(raising glass)
-To old times!
-
-SARAH:
-To new beginnings! 
+Description: INT. HIGH SCHOOL GYM - NIGHT. The gym is decorated with streamers and balloons. A DJ plays music in the corner.
+[DIALOGUE: John] To old times!
+[DIALOGUE: Sarah] To new beginnings!
