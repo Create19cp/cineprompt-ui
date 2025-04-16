@@ -25,11 +25,15 @@ const Character = sequelize.define('Character', {
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
-      model: Project, // Use Project model
+      model: Project,
       key: 'id',
     },
     onDelete: 'CASCADE',
     onUpdate: 'CASCADE',
+  },
+  voiceId: {
+    type: DataTypes.STRING,
+    allowNull: true, // CHANGED: No defaultValue
   },
 }, {
   tableName: 'characters',

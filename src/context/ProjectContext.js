@@ -74,6 +74,7 @@ export function ProjectProvider({ children }) {
             description: char.description || null,
             color: char.color || '#000000',
             projectId: currentProject.id,
+            voiceId: char.voiceId || null // FIXED: Include voiceId
           }))
         : currentProject.characters || [];
 

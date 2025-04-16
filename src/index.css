@@ -257,6 +257,20 @@ code {
 
 /* ===== Form Styles ===== */
 
+.form-control-color {
+  position: relative
+}
+
+.form-control-color:before {
+  content: '\F342';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translatex(-50%) translatey(-50%);
+  font-family: bootstrap-icons !important;
+  color: #ddd;
+}
+
 .form-control,
 .form-select {
   background: var(--cp-darker);

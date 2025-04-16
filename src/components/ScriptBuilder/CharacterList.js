@@ -18,9 +18,10 @@ export default function CharacterList({ characters, setCharacters }) {
         name: character.name.trim(),
         description: character.description || null,
         color: character.color || "#FFFFFF",
+        voiceId: character.voiceId || null // FIXED: Include voiceId
       };
 
-      console.log("Saving character:", JSON.stringify(characterData, null, 2));
+      console.log("CharacterList saving character:", JSON.stringify(characterData, null, 2)); // UPDATED: Detailed log
 
       setCharacters((prev) => {
         if (isEditing && characterData.id) {

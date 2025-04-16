@@ -22,9 +22,10 @@ export default function Characters({ characters, setCharacters }) {
         description: character.description?.trim() || null,
         color: character.color || '#55af65',
         projectId: currentProject.id,
+        voiceId: character.voiceId || null // FIXED: Include voiceId
       };
 
-      console.log('Saving character with tempId:', tempId, JSON.stringify(characterData, null, 2));
+      console.log('Characters saving character:', JSON.stringify(characterData, null, 2)); // UPDATED: Detailed log
 
       setCharacters((prev) => {
         const isEditing = character.id && prev.some(c => c.id === character.id);
@@ -43,6 +44,7 @@ export default function Characters({ characters, setCharacters }) {
           description: c.description || null,
           color: c.color,
           projectId: currentProject.id,
+          voiceId: c.voiceId || null // FIXED: Include voiceId
         }));
 
         console.log('Sending characters to backend:', JSON.stringify(charactersToSave, null, 2));
@@ -56,7 +58,8 @@ export default function Characters({ characters, setCharacters }) {
                 const matchingBackendChar = backendCharacters.find(bc =>
                   bc.name === pc.name &&
                   bc.description === pc.description &&
-                  bc.color === pc.color
+                  bc.color === pc.color &&
+                  bc.voiceId === pc.voiceId // ADDED: Match voiceId
                 );
                 return matchingBackendChar ? { ...pc, id: matchingBackendChar.id } : pc;
               });
