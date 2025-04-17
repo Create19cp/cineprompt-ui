@@ -41,6 +41,7 @@ export function ProjectProvider({ children }) {
 
   const createProject = async (name, description) => {
     try {
+      // Create project
       const response = await fetch('http://localhost:3001/api/projects', {
         method: 'POST',
         headers: {
@@ -49,13 +50,59 @@ export function ProjectProvider({ children }) {
         body: JSON.stringify({ name, description }),
       });
       if (!response.ok) throw new Error('Failed to create project');
-      const newProject = await response.json();
+      let newProject = await response.json();
       console.log('Created project:', JSON.stringify(newProject, null, 2));
-      setProjects(prev => [...prev, newProject]);
+
+      // Check if script exists; if not, set a temporary script and retry fetch
+      if (!newProject.script?.id) {
+        console.log('No script found, setting temporary script and retrying fetch');
+        newProject = {
+          ...newProject,
+          script: {
+            id: `temp-${newProject.id}`,
+            content: '',
+            wordCount: 0,
+            projectId: newProject.id,
+          },
+        };
+
+        // Retry fetching project to get backend script (up to 3 attempts, 1s delay)
+        let attempts = 3;
+        while (attempts > 0 && !newProject.script?.id?.toString().startsWith('temp-')) {
+          try {
+            console.log(`Retrying fetch for project ${newProject.id}, attempt ${4 - attempts}`);
+            const retryResponse = await fetch(`http://localhost:3001/api/projects/${newProject.id}`);
+            if (!retryResponse.ok) throw new Error('Failed to fetch project');
+            const retryProject = await retryResponse.json();
+            console.log('Retried project:', JSON.stringify(retryProject, null, 2));
+            if (retryProject.script?.id) {
+              newProject = retryProject;
+              break;
+            }
+            attempts--;
+            if (attempts > 0) {
+              await new Promise((resolve) => setTimeout(resolve, 1000));
+            }
+          } catch (retryError) {
+            console.error('Retry fetch error:', retryError.message);
+            attempts--;
+            if (attempts > 0) {
+              await new Promise((resolve) => setTimeout(resolve, 1000));
+            }
+          }
+        }
+
+        if (newProject.script?.id?.toString().startsWith('temp-')) {
+          console.warn('No backend script created, using temporary script ID');
+        }
+      }
+
+      setProjects((prev) => [...prev, newProject]);
       setCurrentProject(newProject);
       localStorage.setItem('lastActiveProjectId', newProject.id.toString());
+      return newProject;
     } catch (error) {
-      console.error('Error creating project:', error);
+      console.error('Error creating project:', error.message, error.stack);
       throw error;
     }
   };
@@ -67,33 +114,71 @@ export function ProjectProvider({ children }) {
     }
 
     try {
+      console.log('updateProject received fields:', JSON.stringify(updatedFields, null, 2));
+
+      // Process characters
       const characters = updatedFields.characters
-        ? updatedFields.characters.map(char => ({
+        ? updatedFields.characters.map((char) => ({
             id: char.id || null,
             name: char.name,
             description: char.description || null,
-            color: char.color || '#000000',
+            color: char.color || '#55af65',
             projectId: currentProject.id,
-            voiceId: char.voiceId || null // FIXED: Include voiceId
+            voiceId: char.voiceId || null,
           }))
         : currentProject.characters || [];
 
+      console.log('Processed characters:', JSON.stringify(characters, null, 2));
+
+      // Create character map for dialogue lookup
+      const characterMap = new Map(characters.map((c) => [c.name.toLowerCase(), c.id]));
+      console.log('Character map:', Array.from(characterMap.entries()));
+
+      // Check if script exists; use temporary if missing
+      let scriptId = currentProject.script?.id;
+      if (!scriptId && updatedFields.scenes?.length > 0) {
+        console.log('No script ID found, using temporary script ID');
+        scriptId = `temp-${currentProject.id}`;
+        setCurrentProject((prev) => ({
+          ...prev,
+          script: {
+            id: scriptId,
+            content: '',
+            wordCount: 0,
+            projectId: currentProject.id,
+          },
+        }));
+      }
+
+      // Process scenes
       const scenes = updatedFields.scenes
-        ? updatedFields.scenes.map(scene => ({
+        ? updatedFields.scenes.map((scene) => ({
             id: scene.id || null,
             name: scene.name,
             description: scene.description || null,
-            scriptId: currentProject.script?.id,
+            scriptId: scriptId || currentProject.script?.id,
             dialogues: Array.isArray(scene.dialogues)
-              ? scene.dialogues.map((d, dIndex) => ({
-                  id: d.id || null,
-                  content: d.content || d.line || "",
-                  characterId: d.characterId,
-                  orderIndex: d.orderIndex || dIndex,
-                }))
+              ? scene.dialogues.map((d, dIndex) => {
+                  const characterId = d.characterId || characterMap.get(d.characterName?.toLowerCase());
+                  if (!d.content) {
+                    console.warn('Invalid dialogue (missing content) in scene:', scene.name, JSON.stringify(d, null, 2));
+                    return null;
+                  }
+                  if (!characterId && !characterMap.has(d.characterName?.toLowerCase())) {
+                    console.warn('No character found for dialogue:', d.characterName, JSON.stringify(d, null, 2));
+                  }
+                  return {
+                    id: d.id || null,
+                    content: d.content || d.line || '',
+                    characterId: characterId || null,
+                    orderIndex: d.orderIndex || dIndex,
+                  };
+                }).filter((d) => d !== null)
               : [],
           }))
         : currentProject.script?.scenes || [];
+
+      console.log('Processed scenes:', JSON.stringify(scenes, null, 2));
 
       const mergedData = {
         id: currentProject.id,
@@ -119,17 +204,12 @@ export function ProjectProvider({ children }) {
             },
       };
 
-      if (!currentProject.script?.id) {
-        console.error('No script ID available for project:', JSON.stringify(currentProject, null, 2));
-        throw new Error('Cannot save without a script');
-      }
-
-      if (mergedData.scenes.some(scene => !scene.scriptId)) {
+      if (mergedData.scenes.some((scene) => !scene.scriptId)) {
         console.error('Missing scriptId in scenes:', JSON.stringify(mergedData.scenes, null, 2));
         throw new Error('All scenes must have a scriptId');
       }
 
-      console.log('Sending update data:', JSON.stringify(mergedData, null, 2));
+      console.log('Sending update data to backend:', JSON.stringify(mergedData, null, 2));
       const response = await fetch(`http://localhost:3001/api/projects/${currentProject.id}`, {
         method: 'PUT',
         headers: {
@@ -147,8 +227,16 @@ export function ProjectProvider({ children }) {
       const updatedProject = await response.json();
       console.log('Received updated project:', JSON.stringify(updatedProject, null, 2));
 
-      setProjects(prev =>
-        prev.map(p => (p.id === updatedProject.id ? updatedProject : p))
+      // Check for issues
+      if (updatedProject.characters.length === 0 && updatedFields.characters?.length > 0) {
+        console.warn('Characters not saved in backend response:', JSON.stringify(updatedFields.characters, null, 2));
+      }
+      if (updatedProject.script?.scenes.some((s) => s.dialogues?.length === 0) && updatedFields.scenes?.some((s) => s.dialogues?.length > 0)) {
+        console.warn('Dialogues missing in backend response:', JSON.stringify(updatedProject.script?.scenes, null, 2));
+      }
+
+      setProjects((prev) =>
+        prev.map((p) => (p.id === updatedProject.id ? updatedProject : p))
       );
       setCurrentProject(updatedProject);
       return updatedProject;
@@ -184,7 +272,7 @@ export function ProjectProvider({ children }) {
         method: 'DELETE',
       });
       if (!response.ok) throw new Error('Failed to delete project');
-      setProjects(prev => prev.filter(p => p.id !== projectId));
+      setProjects((prev) => prev.filter((p) => p.id !== projectId));
       if (currentProject && currentProject.id === projectId) {
         setCurrentProject(null);
         localStorage.removeItem('lastActiveProjectId');

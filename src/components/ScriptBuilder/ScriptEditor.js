@@ -7,7 +7,7 @@ import useOpenAI from '../../hooks/useOpenAI';
 import { Document, Packer, Paragraph, TextRun } from 'docx';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import { parseScriptToScenes } from '../../utils/scriptHelpers';
+import { parseScriptToScenes, parseScriptToCharacters } from '../../utils/scriptHelpers';
 
 export default function ScriptEditor({ script, setScript, scenes }) {
   const { currentProject, updateProject } = useProject();
@@ -214,17 +214,65 @@ export default function ScriptEditor({ script, setScript, scenes }) {
     }, 0);
   };
 
-  const handleImport = (e) => {
+  const handleImport = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       const content = e.target.result;
       const formattedContent = formatImportedScript(content);
       setScript(formattedContent);
       saveToHistory(formattedContent);
       e.target.value = '';
+
+      // Parse and save characters first
+      try {
+        console.log('Parsing imported script:', formattedContent);
+        const parsedCharacters = parseScriptToCharacters(formattedContent);
+        console.log('Parsed characters:', JSON.stringify(parsedCharacters, null, 2));
+
+        // Update project with characters
+        const existingCharacters = currentProject?.characters || [];
+        const existingCharacterNames = new Set(existingCharacters.map((c) => c.name.toLowerCase()));
+        const newCharacters = parsedCharacters.filter(
+          (c) => !existingCharacterNames.has(c.name.toLowerCase())
+        );
+        const updatedCharacters = [...existingCharacters, ...newCharacters];
+
+        console.log('Saving characters:', JSON.stringify(updatedCharacters, null, 2));
+        const characterUpdate = await updateProject({
+          characters: updatedCharacters,
+        });
+        console.log('Characters saved, updated project:', JSON.stringify(characterUpdate, null, 2));
+
+        // Parse scenes with saved characters
+        const savedCharacters = characterUpdate.characters || updatedCharacters;
+        const parsedScenes = parseScriptToScenes(formattedContent, savedCharacters);
+        console.log('Parsed scenes with saved characters:', JSON.stringify(parsedScenes, null, 2));
+
+        if (parsedScenes.some((s) => s.dialogues?.length > 0)) {
+          console.log('Dialogues found in parsed scenes');
+        } else {
+          console.warn('No dialogues found in parsed scenes');
+        }
+
+        // Update project with scenes and script
+        await updateProject({
+          scenes: parsedScenes,
+          script: {
+            content: formattedContent,
+            wordCount: formattedContent.trim().split(/\s+/).filter(Boolean).length,
+          },
+        });
+
+        console.log('Updated project with scenes and script');
+        triggerToast('Script imported successfully', 'success');
+      } catch (error) {
+        console.error('Error importing script:', error);
+        triggerToast(`Failed to import script: ${error.message}`, 'error');
+      }
+
       setShowSceneDropdown((prev) => !prev);
     };
     reader.readAsText(file);
