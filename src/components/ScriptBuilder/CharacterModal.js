@@ -84,7 +84,7 @@ export default function CharacterModal({ show, onClose, onSave, onDelete, initia
             <div className="d-flex gap-2 mb-2 align-items-center">
               <input
                 type="color"
-                className="form-control form-control-color p-0 rounded-circle"
+                className="form-control form-control-color p-0 cp-rounded-sm"
                 value={color}
                 onChange={(e) => setColor(e.target.value)}
                 title="Choose character color"
