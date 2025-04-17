@@ -53,9 +53,9 @@ export function ProjectProvider({ children }) {
       let newProject = await response.json();
       console.log('Created project:', JSON.stringify(newProject, null, 2));
 
-      // Check if script exists; if not, set a temporary script and retry fetch
+      // Check if script exists; if not, set a temporary script and save
       if (!newProject.script?.id) {
-        console.log('No script found, setting temporary script and retrying fetch');
+        console.log('No script found, setting temporary script and saving');
         newProject = {
           ...newProject,
           script: {
@@ -66,11 +66,23 @@ export function ProjectProvider({ children }) {
           },
         };
 
-        // Retry fetching project to get backend script (up to 3 attempts, 1s delay)
-        let attempts = 3;
-        while (attempts > 0 && !newProject.script?.id?.toString().startsWith('temp-')) {
+        // Save project with default script
+        console.log('Saving project with default script');
+        const updatedProject = await updateProject({
+          script: {
+            content: '',
+            wordCount: 0,
+          },
+        }, newProject);
+        if (updatedProject) {
+          newProject = updatedProject;
+        }
+
+        // Retry fetching project to get backend script (up to 5 attempts, 2s delay)
+        let attempts = 5;
+        while (attempts > 0 && newProject.script?.id?.toString().startsWith('temp-')) {
           try {
-            console.log(`Retrying fetch for project ${newProject.id}, attempt ${4 - attempts}`);
+            console.log(`Retrying fetch for project ${newProject.id}, attempt ${6 - attempts}`);
             const retryResponse = await fetch(`http://localhost:3001/api/projects/${newProject.id}`);
             if (!retryResponse.ok) throw new Error('Failed to fetch project');
             const retryProject = await retryResponse.json();
@@ -81,13 +93,13 @@ export function ProjectProvider({ children }) {
             }
             attempts--;
             if (attempts > 0) {
-              await new Promise((resolve) => setTimeout(resolve, 1000));
+              await new Promise((resolve) => setTimeout(resolve, 2000));
             }
           } catch (retryError) {
             console.error('Retry fetch error:', retryError.message);
             attempts--;
             if (attempts > 0) {
-              await new Promise((resolve) => setTimeout(resolve, 1000));
+              await new Promise((resolve) => setTimeout(resolve, 2000));
             }
           }
         }
@@ -100,6 +112,7 @@ export function ProjectProvider({ children }) {
       setProjects((prev) => [...prev, newProject]);
       setCurrentProject(newProject);
       localStorage.setItem('lastActiveProjectId', newProject.id.toString());
+      console.log('Project created and saved:', JSON.stringify(newProject, null, 2));
       return newProject;
     } catch (error) {
       console.error('Error creating project:', error.message, error.stack);
@@ -107,8 +120,9 @@ export function ProjectProvider({ children }) {
     }
   };
 
-  const updateProject = async (updatedFields) => {
-    if (!currentProject) {
+  const updateProject = async (updatedFields, overrideProject = null) => {
+    const projectToUpdate = overrideProject || currentProject;
+    if (!projectToUpdate) {
       console.error('No current project to update');
       return;
     }
@@ -123,10 +137,10 @@ export function ProjectProvider({ children }) {
             name: char.name,
             description: char.description || null,
             color: char.color || '#55af65',
-            projectId: currentProject.id,
+            projectId: projectToUpdate.id,
             voiceId: char.voiceId || null,
           }))
-        : currentProject.characters || [];
+        : projectToUpdate.characters || [];
 
       console.log('Processed characters:', JSON.stringify(characters, null, 2));
 
@@ -135,17 +149,17 @@ export function ProjectProvider({ children }) {
       console.log('Character map:', Array.from(characterMap.entries()));
 
       // Check if script exists; use temporary if missing
-      let scriptId = currentProject.script?.id;
+      let scriptId = projectToUpdate.script?.id;
       if (!scriptId && updatedFields.scenes?.length > 0) {
         console.log('No script ID found, using temporary script ID');
-        scriptId = `temp-${currentProject.id}`;
+        scriptId = `temp-${projectToUpdate.id}`;
         setCurrentProject((prev) => ({
           ...prev,
           script: {
             id: scriptId,
             content: '',
             wordCount: 0,
-            projectId: currentProject.id,
+            projectId: projectToUpdate.id,
           },
         }));
       }
@@ -156,7 +170,7 @@ export function ProjectProvider({ children }) {
             id: scene.id || null,
             name: scene.name,
             description: scene.description || null,
-            scriptId: scriptId || currentProject.script?.id,
+            scriptId: scriptId || projectToUpdate.script?.id,
             dialogues: Array.isArray(scene.dialogues)
               ? scene.dialogues.map((d, dIndex) => {
                   const characterId = d.characterId || characterMap.get(d.characterName?.toLowerCase());
@@ -176,19 +190,19 @@ export function ProjectProvider({ children }) {
                 }).filter((d) => d !== null)
               : [],
           }))
-        : currentProject.script?.scenes || [];
+        : projectToUpdate.script?.scenes || [];
 
       console.log('Processed scenes:', JSON.stringify(scenes, null, 2));
 
       const mergedData = {
-        id: currentProject.id,
-        name: updatedFields.name || currentProject.name,
+        id: projectToUpdate.id,
+        name: updatedFields.name || projectToUpdate.name,
         genres: Array.isArray(updatedFields.genres)
           ? updatedFields.genres
-          : currentProject.genres || [],
+          : projectToUpdate.genres || [],
         tones: Array.isArray(updatedFields.tones)
           ? updatedFields.tones
-          : currentProject.tones || [],
+          : projectToUpdate.tones || [],
         characters,
         scenes,
         script: updatedFields.script
@@ -199,18 +213,21 @@ export function ProjectProvider({ children }) {
                 : 0,
             }
           : {
-              content: currentProject.script?.content || '',
-              wordCount: currentProject.script?.wordCount || 0,
+              content: projectToUpdate.script?.content || '',
+              wordCount: projectToUpdate.script?.wordCount || 0,
             },
       };
 
       if (mergedData.scenes.some((scene) => !scene.scriptId)) {
-        console.error('Missing scriptId in scenes:', JSON.stringify(mergedData.scenes, null, 2));
-        throw new Error('All scenes must have a scriptId');
+        console.warn('Missing scriptId in scenes, using temporary:', JSON.stringify(mergedData.scenes, null, 2));
+        mergedData.scenes = mergedData.scenes.map((scene) => ({
+          ...scene,
+          scriptId: scriptId || `temp-${projectToUpdate.id}`,
+        }));
       }
 
       console.log('Sending update data to backend:', JSON.stringify(mergedData, null, 2));
-      const response = await fetch(`http://localhost:3001/api/projects/${currentProject.id}`, {
+      const response = await fetch(`http://localhost:3001/api/projects/${projectToUpdate.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -226,6 +243,12 @@ export function ProjectProvider({ children }) {
 
       const updatedProject = await response.json();
       console.log('Received updated project:', JSON.stringify(updatedProject, null, 2));
+
+      // Replace temporary script ID with backend ID
+      if (updatedProject.script?.id && projectToUpdate.script?.id?.toString().startsWith('temp-')) {
+        console.log('Replacing temporary script ID with backend ID:', updatedProject.script.id);
+        setCurrentProject(updatedProject);
+      }
 
       // Check for issues
       if (updatedProject.characters.length === 0 && updatedFields.characters?.length > 0) {
